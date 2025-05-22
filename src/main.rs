@@ -1,21 +1,23 @@
 use std::{
     fs,
-    io::{BufReader, prelude::*},
+    io::{BufRead, BufReader, Write},
     net::{TcpListener, TcpStream},
 };
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
 
-    for stream in listener.incoming() {
-        let stream = stream.unwrap();
+    for possible_stream in listener.incoming() {
+        let Ok(stream) = possible_stream else {
+            continue;
+        };
 
         handle_connection(stream);
     }
 }
 
-fn handle_connection(mut stream: TcpStream) {
-    let buf_reader = BufReader::new(&stream);
+fn handle_connection(mut client: TcpStream) {
+    let buf_reader = BufReader::new(&client);
     let request_line = buf_reader.lines().next().unwrap().unwrap();
 
     let (status_line, filename) = if request_line == "GET / HTTP/1.1" {
@@ -30,5 +32,5 @@ fn handle_connection(mut stream: TcpStream) {
         "{}\r\nContent length: {}\r\n\r\n{}",
         status_line, length, contents
     );
-    stream.write_all(response.as_bytes()).unwrap();
+    client.write_all(response.as_bytes()).unwrap();
 }
